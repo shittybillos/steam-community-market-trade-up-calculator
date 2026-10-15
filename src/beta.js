@@ -2,6 +2,7 @@
 // 2026-10-14 (B9PZEMjO.js). React props are read; never patched or invoked.
 export const betaRows = '.TfblJ5tKSxE-, .tTW8H6l2CzQ-';
 export const listingRows = `[id^="listing_"], [data-listingid], [data-listing-id], [data-cs2-tradeup-listing], ${betaRows}`;
+export const iconUrl = icon => typeof icon === 'string' && /^[\w-]{20,}$/.test(icon) ? `https://community.akamai.steamstatic.com/economy/image/${icon}/256fx192f` : null;
 export function betaListingFor(element) {
   const key = Object.keys(element).find(k=>k.startsWith('__reactFiber$'));
   let fiber=key && element[key];
@@ -33,7 +34,7 @@ export function betaRecord(listing,element) {
   const seeds=[...(element?.textContent || '').matchAll(/Pattern Template\s*:\s*(\d+)/g)];
   const nativeSeed=seeds.length===1 ? Number(seeds[0][1]) : null;
   return {adapter:'steam-beta',listingId:String(listing.listingid),assetId:String(asset.assetid),name:description.market_hash_name || description.market_name || description.name,
-    nativeFloat:float,nativeSeed,inspect,unavailable:Number(asset.amount)===0,
+    nativeFloat:float,nativeSeed,inspect,image:iconUrl(description.icon_url_large || description.icon_url),unavailable:Number(asset.amount)===0,
     stattrak:tags.some(t=>t.category==='Quality' && t.internal_name==='strange'),
     souvenir:tags.some(t=>t.category==='Quality' && t.internal_name==='tournament'),
     collectionName:collection?.localized_tag_name,collectionTag:collection?.internal_name,

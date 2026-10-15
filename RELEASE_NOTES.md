@@ -1,9 +1,10 @@
 Chrome extension for CS2 trade-ups directly on Steam Community Market, supporting Beta and classic pages.
 
-### What's new in v0.4.1
+### What's new in v0.5.0
 
-- Refreshed trade-up bench styling with clearer hierarchy, smoother controls and improved small-screen fit.
-- More visible keyboard focus and polished listing buttons.
+- Resize the bench between the compact popup and a 75%-screen view with the ⤢ button in the header.
+- Item images for every input (taken from its Steam listing) and every output, including each Doppler/Gamma Doppler gem and phase.
+- Includes the v0.4.1 visual refresh.
 
 - Standard ten-input contracts and five-Covert knife/glove contracts.
 - Exact listing floats, input cost snapshots, output odds and predicted wear.

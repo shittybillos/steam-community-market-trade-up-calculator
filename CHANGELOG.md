@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+- Add a compact/75%-screen size toggle to the trade-up bench; the large view shows inputs and outcomes side by side and remembers your choice.
+- Show item images for every input (from its Steam listing) and every output, including individual Doppler/Gamma Doppler gems and phases.
+
 ## 0.4.1
 
 - Refresh the trade-up bench with clearer visual hierarchy, smoother controls and a responsive small-screen layout.

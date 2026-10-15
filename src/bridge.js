@@ -1,4 +1,4 @@
-import {betaRows,betaListingFor,betaRecord} from './beta.js';
+import {betaRows,betaListingFor,betaRecord,iconUrl} from './beta.js';
 // Read-only adapters. No Steam APIs, React calls, fetch hooks or purchases.
 (() => {
   let last = '';
@@ -30,6 +30,7 @@ import {betaRows,betaListingFor,betaRecord} from './beta.js';
       const base = listing.converted_price ?? listing.price;
       const fee = listing.converted_fee ?? listing.fee;
       records.push({listingId:id, assetId:String(ref.id), name:asset.market_hash_name,
+        image:iconUrl(asset.icon_url_large || asset.icon_url),
         inspect:action.link.replaceAll('%listingid%',id).replaceAll('%assetid%',String(ref.id)).replaceAll('%owner_steamid%',String(listing.steamid_lister || '')),
         souvenir:tags.some(t => /souvenir/i.test(t.internal_name || '')),
         collectionName:collection?.localized_tag_name,

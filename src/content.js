@@ -13,10 +13,10 @@ import {listingRows,betaRows} from './beta.js';
   const launcher = document.createElement('button'); launcher.className='launcher'; launcher.textContent='◈ Trade-up bench';
   launcher.setAttribute('aria-label','Open CS2 trade-up bench');
   const panel = document.createElement('section'); panel.className='panel'; panel.hidden=true;
-  panel.innerHTML = `<header><div><span class="eyebrow">CS2 / COMMUNITY MARKET</span><h1>Trade-up bench</h1></div><button id="close" aria-label="Minimize calculator" title="Minimize">×</button></header>
+  panel.innerHTML = `<header><div><span class="eyebrow">CS2 / COMMUNITY MARKET</span><h1>Trade-up bench</h1></div><div class="window-actions"><button id="size" aria-label="Expand calculator" aria-pressed="false" title="Expand to 75% of the screen">⤢</button><button id="close" aria-label="Minimize calculator" title="Minimize">×</button></div></header>
     <nav aria-label="Trade-up bench views"><button id="contract" class="active">Contract <span id="count">0/10</span></button><button id="browse">Page listings</button></nav>
     <p id="error" role="alert" hidden></p>
-    <div id="contractView"><div id="stats"></div><div id="basket"></div><div class="actions"><button id="export">Export JSON</button><button id="clear">Clear basket</button></div><h2>Possible outcomes</h2><p id="resultNote" class="muted"></p><div id="outcomes"></div></div>
+    <div id="contractView"><div class="cols"><section class="col"><div id="stats"></div><div id="basket"></div><div class="actions"><button id="export">Export JSON</button><button id="clear">Clear basket</button></div></section><section class="col"><h2>Possible outcomes</h2><p id="resultNote" class="muted"></p><div id="outcomes"></div></section></div></div>
     <div id="browseView" hidden><form id="searchForm"><label>Search CS2 market<input id="marketSearch" type="search" placeholder="AK-47 Redline" maxlength="160"></label><button type="submit">Search Steam</button></form><p class="muted">Search opens Steam’s CS2 results. Float filters below apply to loaded individual listings in this panel.</p><label>Filter loaded skins<input id="nameFilter" type="search" placeholder="Name or collection"></label><div class="filters"><label>Min float<input id="min" type="number" min="0" max="1" step="0.001" placeholder="0"></label><label>Max float<input id="max" type="number" min="0" max="1" step="0.001" placeholder="1"></label><label>Sort<select id="sort"><option value="float">Lowest float</option><option value="price">Lowest price</option></select></label></div><button id="scan">Refresh loaded listings</button><p id="scanNote" class="muted"></p><div id="candidates"></div></div>
     <footer>Listing snapshots · 10-skin standard / 5-Covert gold contracts<br>Floats read locally. Prices include Steam’s listing fee when available.</footer>`;
   root.append(panel,launcher); document.documentElement.append(host);
@@ -35,6 +35,14 @@ import {listingRows,betaRows} from './beta.js';
     } catch(e){showError(e.message);}
   }
   launcher.onclick=open;
+  function setLarge(large){
+    panel.classList.toggle('large',large);host.classList.toggle('large',large);
+    $('size').textContent=large?'⤡':'⤢';$('size').setAttribute('aria-pressed',String(large));
+    $('size').setAttribute('aria-label',large?'Shrink calculator':'Expand calculator');$('size').title=large?'Back to compact size':'Expand to 75% of the screen';
+    try{localStorage.setItem('cs2-tradeup-size',large?'large':'compact');}catch{/* Storage can be blocked. */}
+  }
+  $('size').onclick=()=>setLarge(!panel.classList.contains('large'));
+  try{if(localStorage.getItem('cs2-tradeup-size')==='large')setLarge(true);}catch{/* Storage can be blocked. */}
   $('close').onclick=()=>{panel.hidden=true;launcher.hidden=false;};
   function setView(next){view=next;open();$('contractView').hidden=next!=='contract';$('browseView').hidden=next!=='browse';$('contract').classList.toggle('active',next==='contract');$('browse').classList.toggle('active',next==='browse');if(next==='browse')scan();}
   $('contract').onclick=()=>setView('contract');$('browse').onclick=()=>setView('browse');
@@ -50,6 +58,12 @@ import {listingRows,betaRows} from './beta.js';
   };
   function el(tag,text,className){const e=document.createElement(tag);if(text!=null)e.textContent=text;if(className)e.className=className;return e;}
   function marketLink(name,url){const a=el('a',name);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;}
+  function thumb(src,alt){
+    const frame=el('div',null,'thumb');
+    if(src){const img=document.createElement('img');img.src=src;img.alt=alt;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';img.onerror=()=>img.remove();frame.append(img);}
+    return frame;
+  }
+  const catalogImage=id=>catalog.find(s=>s.id===id)?.image || null;
   function money(minor,currency){
     const codes={1:'USD',2:'GBP',3:'EUR',4:'CHF',5:'RUB',6:'PLN',7:'BRL',8:'JPY',9:'NOK',10:'IDR',11:'MYR',12:'PHP',13:'SGD',14:'THB',15:'VND',16:'KRW',17:'TRY',18:'UAH',19:'MXN',20:'CAD',21:'AUD',22:'NZD',23:'CNY',24:'INR'};
     const code=codes[currency >= 2000 ? currency-2000 : currency];
@@ -70,7 +84,7 @@ import {listingRows,betaRows} from './beta.js';
     basket.forEach((i,n)=>{
       const card=el('article',null,'card');const content=el('div');
       content.append(marketLink(`${n+1}. ${i.name}`,i.url),el('p',`${i.float.toFixed(10)} · ${wear(i.float)} · Seed ${i.seed ?? '—'}`,'detail'),el('p',`${i.collection.name} · ${i.priceText || (i.priceMinor!=null && i.currency!=null ? money(i.priceMinor,i.currency):'Price unavailable')}`,'muted'),el('p',`Listing ${i.listingId} · captured ${new Date(i.capturedAt).toLocaleString()}`,'micro'));
-      const remove=el('button','×');remove.setAttribute('aria-label',`Remove ${i.name}`);remove.onclick=()=>command('remove',{listingId:i.listingId});card.append(content,remove);$('basket').append(card);
+      const remove=el('button','×');remove.setAttribute('aria-label',`Remove ${i.name}`);remove.onclick=()=>command('remove',{listingId:i.listingId});card.append(thumb(i.image || catalogImage(i.skinId),i.name),content,remove);$('basket').append(card);
     });
     const state=!basket.length?'Outcomes appear after the first skin.':result.complete?`Complete ${result.gold?'gold':'standard'} contract · predicted floats and odds.`:`Preview for the current ${basket.length} inputs. Add ${required-basket.length} more to complete the contract; predictions will change.`;
     $('resultNote').textContent=state+(result.gold?' Gold odds are per finish family. Eligible Doppler gems/phases are listed individually below their finish; individual phase odds are not estimated.':'');
@@ -79,19 +93,24 @@ import {listingRows,betaRows} from './beta.js';
       const prefix=basket[0].stattrak?'StatTrak™ ':'';
       const displayName=o.skin.gold?o.skin.name.replace(/^★ /,`★ ${prefix}`):`${prefix}${o.skin.name}`;
       const name=displayName+(o.wear?` (${o.wear})`:'');
-      const card=el('article',null,'outcome'),line=el('div');
+      const card=el('article',null,'outcome'),line=el('div',null,'outcome-line');
       line.append(marketLink(displayName,`https://steamcommunity.com/market/listings/730/${encodeURIComponent(name)}`),el('b',`${(o.probability*100).toFixed(2)}%`));
       if(o.variants?.length){
         line.lastElementChild.textContent=`${(o.probability*100).toFixed(2)}% combined`;
-        card.append(line,el('p','Finish chance covers the eligible outcomes below. Individual phase/gem odds are unavailable.','muted'));
+        card.append(thumb(o.skin.image,displayName),el('div',null,'outcome-body'));const body=card.lastElementChild;
+        body.append(line,el('p','Finish chance covers the eligible outcomes below. Individual phase/gem odds are unavailable.','muted'));
         for(const v of o.variants){
           const variant=el('article',null,'phase-output');variant.dataset.phase=v.phase;variant.dataset.paintIndex=String(v.paintIndex);
           const label=marketLink(`${displayName} — ${v.phase}`,`https://steamcommunity.com/market/listings/730/${encodeURIComponent(displayName+` (${v.wear})`)}`);
           label.title='Steam groups phases in this finish’s market listings.';
-          variant.append(label,el('p',`${v.float.toFixed(10)} · ${v.wear}`,'detail'));
-          card.append(variant);
+          const text=el('div');text.append(label,el('p',`${v.float.toFixed(10)} · ${v.wear}`,'detail'));
+          variant.append(thumb(v.image || o.skin.image,`${displayName} ${v.phase}`),text);
+          body.append(variant);
         }
-      }else card.append(line,el('p',o.float==null?'Vanilla · no exterior':`${o.float.toFixed(10)} · ${o.wear}`,'detail'));
+      }else{
+        const body=el('div',null,'outcome-body');body.append(line,el('p',o.float==null?'Vanilla · no exterior':`${o.float.toFixed(10)} · ${o.wear}`,'detail'));
+        card.append(thumb(o.skin.image,displayName),body);
+      }
       $('outcomes').append(card);
     });
     renderCandidates();
@@ -117,7 +136,7 @@ import {listingRows,betaRows} from './beta.js';
     $('scanNote').textContent=all.length?`${list.length} matching / ${all.length} listings detected. ${all.filter(x=>x.error).length} unavailable or ineligible.`:'No individual listings detected. Open a CS2 skin page and wait for listing cards to load, then refresh loaded listings. Search results may show skin groups rather than individual listings.';
     list.forEach(({record,item})=>{
       const card=el('article',null,'card'),content=el('div');content.append(el('b',item.name),el('p',`${item.float.toFixed(10)} · ${item.priceText || (item.priceMinor!=null && item.currency!=null ? money(item.priceMinor,item.currency):'Price unavailable')}`,'detail'));
-      const add=el('button',basket.some(i=>i.listingId===item.listingId)?'Added':'+ Add');add.disabled=basket.some(i=>i.listingId===item.listingId);add.onclick=()=>command('add',{record});card.append(content,add);$('candidates').append(card);
+      const add=el('button',basket.some(i=>i.listingId===item.listingId)?'Added':'+ Add');add.disabled=basket.some(i=>i.listingId===item.listingId);add.onclick=()=>command('add',{record});card.append(thumb(item.image || catalogImage(item.skinId),item.name),content,add);$('candidates').append(card);
     });
     all.filter(x=>x.error).forEach(x=>{const entry=el('p',`${x.record.name || 'Listing'}: ${x.error}`,'muted');$('candidates').append(entry);});
   }
@@ -135,7 +154,7 @@ import {listingRows,betaRows} from './beta.js';
       for(const [id,row] of visibleRows){
         if(records.has(id))continue;
         const a=row.querySelector('a[href*="csgo_econ_action_preview"]');if(!a)continue;
-        try{const d=decodeInspect(a.href);if(!d.itemid)continue;records.set(id,{listingId:id,assetId:String(d.itemid),inspect:a.href,name:decodeURIComponent(location.pathname.split('/')[4] || ''),priceText:row.querySelector('.market_listing_price_with_fee')?.textContent.trim() || ''});}catch{}
+        try{const d=decodeInspect(a.href);if(!d.itemid)continue;records.set(id,{listingId:id,assetId:String(d.itemid),inspect:a.href,image:row.querySelector('img[src*="steamstatic.com/economy/image"]')?.src || null,name:decodeURIComponent(location.pathname.split('/')[4] || ''),priceText:row.querySelector('.market_listing_price_with_fee')?.textContent.trim() || ''});}catch{}
       }
       for(const record of records.values()) {
         const row=rowFor(record.listingId);if(!row)continue;

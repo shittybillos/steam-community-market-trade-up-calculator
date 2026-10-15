@@ -22,6 +22,10 @@ export function decodeInspect(link) {
   if (!Number.isFinite(d.paintwear) || d.paintwear < 0 || d.paintwear > 1 || !d.defindex || d.paintindex == null) throw new Error('Inspect link has no valid skin float.');
   return d;
 }
+// Only Steam economy images are accepted from page-supplied listing data.
+export function safeImage(url) {
+  return typeof url === 'string' && url.length < 600 && /^https:\/\/[a-z0-9.-]+\.steamstatic\.com\/economy\/image\/[\w\-\/]+$/i.test(url) ? url : null;
+}
 export function resolveListing(record, catalog) {
   if (!record || !/^\d+$/.test(String(record.listingId)) || !/^\d+$/.test(String(record.assetId))) throw new Error('Listing identity is missing.');
   if(record.unavailable)throw new Error('This listing is no longer available.');
@@ -63,7 +67,7 @@ export function resolveListing(record, catalog) {
     listingId: String(record.listingId), assetId: String(record.assetId), skinId: skin.id,
     name: `${st ? 'StatTrak™ ' : ''}${skin.name}`, float: d.paintwear, seed: d.paintseed ?? null,
     min: skin.min, max: skin.max, rarity: skin.rarity, stattrak: st, collection,
-    inspect: record.inspect, priceMinor: Number.isSafeInteger(record.priceMinor) && record.priceMinor >= 0 ? record.priceMinor : null,
+    inspect: record.inspect, image: safeImage(record.image), priceMinor: Number.isSafeInteger(record.priceMinor) && record.priceMinor >= 0 ? record.priceMinor : null,
     currency: Number.isInteger(record.currency) ? record.currency : null,
     priceText: typeof record.priceText === 'string' ? record.priceText.slice(0,100) : '',
     url: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(record.name || `${st ? 'StatTrak™ ' : ''}${skin.name} (${wear(d.paintwear)})`)}`,

@@ -25,6 +25,7 @@ To update, replace the files in the same extension folder, reload the extension 
 - Shared local basket across tabs, with serialized writes to prevent lost additions.
 - Bounded scans of up to 200 rendered listings, cached decoding, and no recurring market polling.
 - Duplicate, Souvenir, mixed-rarity and mixed-StatTrak input rejection.
+- Item images for every input (taken from its Steam listing) and every output, plus a compact or 75%-screen bench size toggle (⤢ in the header).
 
 **StatTrak Covert skins from glove collections cannot be used in any contract.** They are blocked at selection and basket validation. Lower-rarity StatTrak skins from those collections remain eligible for standard contracts.
 
