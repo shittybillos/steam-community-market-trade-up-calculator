@@ -4,7 +4,8 @@ Chrome extension for CS2 trade-ups directly on Steam Community Market, supportin
 - Exact listing floats, input cost snapshots, output odds and predicted wear.
 - Persistent basket, loaded-page filtering and sorting.
 - StatTrak reds from glove collections are blocked from every contract.
-- Doppler phases/gems are grouped under finish-family probabilities.
+- Individual eligible Doppler/Gamma Doppler gems and phases, each with predicted float and wear.
+- Finish headers show combined odds; individual phase/gem probabilities are not estimated.
 
 Download the extension ZIP below (not GitHub's source archive), extract it, enable Developer mode at `chrome://extensions`, and choose Load unpacked. To update an existing installation, replace its files, reload the extension and refresh all Steam market tabs.
 

@@ -109,12 +109,20 @@ export function calculate(items, catalog) {
   items.forEach(i => pools.set(poolId(i), (pools.get(poolId(i)) || 0)+1));
   const result = new Map();
   for (const [id,count] of pools) {
-    const pool = outcomesFor(items.find(i => poolId(i) === id),catalog);
+    const input=items.find(i=>poolId(i)===id);
+    const pool = outcomesFor(input,catalog);
+    const allowedVariants=new Set(input.rarity==='Covert'?catalog.find(s=>s.id===input.skinId).goldPool.variantIds || []:[]);
     for (const skin of pool) {
       const probability = count / items.length / pool.length;
       const f = skin.min==null || skin.max==null ? null : average * (skin.max-skin.min)+skin.min;
       const old = result.get(skin.id);
-      result.set(skin.id, {skin, probability: probability+(old?.probability || 0), float:f, wear:f==null?null:wear(f)});
+      const variants=new Map((old?.variants || []).map(v=>[v.id,v]));
+      for(const v of skin.variants || [])if(allowedVariants.has(v.id)){
+        const vf=average*(v.max-v.min)+v.min;
+        variants.set(v.id,{...v,float:vf,wear:wear(vf),probability:null});
+      }
+      const phaseOrder=['Ruby','Sapphire','Black Pearl','Emerald','Phase 1','Phase 2','Phase 3','Phase 4'];
+      result.set(skin.id, {skin, probability: probability+(old?.probability || 0), float:f, wear:f==null?null:wear(f),variants:[...variants.values()].sort((a,b)=>phaseOrder.indexOf(a.phase)-phaseOrder.indexOf(b.phase))});
     }
   }
   const currency = items[0].currency;

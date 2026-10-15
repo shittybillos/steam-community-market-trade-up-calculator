@@ -139,5 +139,17 @@ assert.match((await chrome.runtime.sendMessage({type:'add',record:goldRecord('AK
 await chrome.runtime.sendMessage({type:'clear'});
 assert.match((await chrome.runtime.sendMessage({type:'add',record:goldRecord('USP-S | Printstream',true)})).error,/cannot be used in any contract/);
 assert.equal(storage.basket.length,0);
+for(let n=0;n<5;n++)assert.ok(!(await chrome.runtime.sendMessage({type:'add',record:goldRecord('P250 | See Ya Later')})).error);
+const gemRows=root.getElementById('outcomes').querySelectorAll('.phase-output');
+assert.equal(gemRows.length,35);
+assert.equal(root.getElementById('outcomes').querySelectorAll('[data-phase="Ruby"]').length,5);
+assert.equal(root.getElementById('outcomes').querySelectorAll('[data-phase="Sapphire"]').length,5);
+assert.equal(root.getElementById('outcomes').querySelectorAll('[data-phase="Black Pearl"]').length,5);
+assert.equal(root.getElementById('outcomes').querySelectorAll('[data-phase="Emerald"]').length,0);
+assert.match(gemRows[0].textContent,/0\.0200000000.*Factory New/);
+assert.ok([...gemRows].every(row=>!row.textContent.includes('%')),'Gem rows must not inherit a misleading combined percentage.');
+assert.match(root.getElementById('outcomes').textContent,/3\.33% combined/);
+assert.ok(gemRows[0].querySelector('a').href.includes(encodeURIComponent('Doppler (Factory New)')));
+await chrome.runtime.sendMessage({type:'clear'});
 dom.window.close();
 console.log('PASS: classic/Beta adapters, native floats, inspect identity, card reuse, click isolation, trade-up math, filters, persistence, concurrency and idle scan stability.');

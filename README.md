@@ -39,7 +39,7 @@ output float = average adjusted input * (output maximum - output minimum) + outp
 
 Incomplete contracts show a preview for the currently selected inputs; adding more inputs changes the results.
 
-Gold outcomes group **Doppler and Gamma Doppler phases/gems by finish family**. Displayed odds combine those variants. Individual phase/gem probabilities and specific paint patterns are not estimated. Vanilla knives have no exterior prediction.
+Gold outcomes show **individual eligible Doppler and Gamma Doppler gems/phases** beneath their finish: Ruby, Sapphire, Black Pearl, Emerald and ordinary phases where present in the selected cases' rare-item pools. Each has its own predicted float and wear. The finish header shows the combined chance; individual phase/gem probabilities and specific paint patterns are not estimated. Gem links open Steam's shared finish listings, since Steam groups phases by market name. Vanilla knives have no exterior prediction.
 
 ## Limits
 
@@ -63,7 +63,7 @@ npm test
 
 Load `dist/` as an unpacked extension. Source is in `src/`; `catalog.mjs` generates the bundled item/pool catalog. `tests/` covers standard/gold math, eligibility, classic/Beta adapters, card reuse, filtering, click isolation, persistence, concurrency and idle-scan stability.
 
-GitHub Actions builds and tests pushes and pull requests. Version tags matching the manifest (for example `v0.3.1`) create a downloadable release ZIP after tests pass.
+GitHub Actions builds and tests pushes and pull requests. Version tags matching the manifest (for example `v0.4.0`) create a downloadable release ZIP after tests pass.
 
 To update the snapshot, download both [`skins.json`](https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json) and [`crates.json`](https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/crates.json), replace the source files, and rebuild. The build rejects missing rare-item references and ambiguous gold pools.
 

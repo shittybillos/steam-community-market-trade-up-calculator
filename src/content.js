@@ -72,7 +72,7 @@ import {listingRows,betaRows} from './beta.js';
       const remove=el('button','×');remove.setAttribute('aria-label',`Remove ${i.name}`);remove.onclick=()=>command('remove',{listingId:i.listingId});card.append(content,remove);$('basket').append(card);
     });
     const state=!basket.length?'Outcomes appear after the first skin.':result.complete?`Complete ${result.gold?'gold':'standard'} contract · predicted floats and odds.`:`Preview for the current ${basket.length} inputs. Add ${required-basket.length} more to complete the contract; predictions will change.`;
-    $('resultNote').textContent=state+(result.gold?' Gold odds are per finish family. Doppler phases/gems are grouped; individual phase odds are not estimated.':'');
+    $('resultNote').textContent=state+(result.gold?' Gold odds are per finish family. Eligible Doppler gems/phases are listed individually below their finish; individual phase odds are not estimated.':'');
     $('outcomes').replaceChildren();
     result.outcomes.forEach(o=>{
       const prefix=basket[0].stattrak?'StatTrak™ ':'';
@@ -80,8 +80,17 @@ import {listingRows,betaRows} from './beta.js';
       const name=displayName+(o.wear?` (${o.wear})`:'');
       const card=el('article',null,'outcome'),line=el('div');
       line.append(marketLink(displayName,`https://steamcommunity.com/market/listings/730/${encodeURIComponent(name)}`),el('b',`${(o.probability*100).toFixed(2)}%`));
-      card.append(line,el('p',o.float==null?'Vanilla · no exterior':`${o.float.toFixed(10)} · ${o.wear}`,'detail'));
-      if(o.skin.phases?.length)card.append(el('p',`Includes ${o.skin.phases.join(', ')} · odds above cover all phases together.`,'muted'));
+      if(o.variants?.length){
+        line.lastElementChild.textContent=`${(o.probability*100).toFixed(2)}% combined`;
+        card.append(line,el('p','Finish chance covers the eligible outcomes below. Individual phase/gem odds are unavailable.','muted'));
+        for(const v of o.variants){
+          const variant=el('article',null,'phase-output');variant.dataset.phase=v.phase;variant.dataset.paintIndex=String(v.paintIndex);
+          const label=marketLink(`${displayName} — ${v.phase}`,`https://steamcommunity.com/market/listings/730/${encodeURIComponent(displayName+` (${v.wear})`)}`);
+          label.title='Steam groups phases in this finish’s market listings.';
+          variant.append(label,el('p',`${v.float.toFixed(10)} · ${v.wear}`,'detail'));
+          card.append(variant);
+        }
+      }else card.append(line,el('p',o.float==null?'Vanilla · no exterior':`${o.float.toFixed(10)} · ${o.wear}`,'detail'));
       $('outcomes').append(card);
     });
     renderCandidates();

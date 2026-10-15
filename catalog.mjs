@@ -6,9 +6,10 @@ export function makeCatalog(raw,crates){
   const families=new Map();
   for(const s of raw.filter(isGold)){
     let group=families.get(s.name);
-    if(!group){group={...normalize(s),id:`gold-${s.id}`,gold:true,phases:[]};families.set(s.name,group);}
+    if(!group){group={...normalize(s),id:`gold-${s.id}`,gold:true,phases:[],variants:[]};families.set(s.name,group);}
     if(group.min!==s.min_float || group.max!==s.max_float || group.stattrak!==s.stattrak)throw new Error(`Inconsistent gold-family range: ${s.name}`);
     if(s.phase && !group.phases.includes(s.phase))group.phases.push(s.phase);
+    if(s.phase)group.variants.push({id:s.id,phase:s.phase,paintIndex:Number(s.paint_index),min:s.min_float,max:s.max_float});
   }
   const inputPools=new Map();
   for(const c of crates.filter(c=>c.contains_rare?.length)){
@@ -18,10 +19,11 @@ export function makeCatalog(raw,crates){
     }))].sort();
     const categories=new Set(c.contains_rare.map(ref=>byRaw.get(ref.id).category.name));
     const kind=categories.size===1 && categories.has('Gloves')?'gloves':categories.size===1 && categories.has('Knives')?'knives':'mixed';
-    const pool={id:c.id,name:c.name,kind,outcomeIds};
+    const variantIds=[...new Set(c.contains_rare.map(ref=>ref.id))].sort();
+    const pool={id:c.id,name:c.name,kind,outcomeIds,variantIds};
     for(const ref of c.contains.filter(s=>s.rarity.name==='Covert')){
       const prior=inputPools.get(ref.id);
-      if(prior && JSON.stringify(prior.outcomeIds)!==JSON.stringify(outcomeIds))throw new Error(`Ambiguous gold pool for ${ref.name}`);
+      if(prior && (JSON.stringify(prior.outcomeIds)!==JSON.stringify(outcomeIds) || JSON.stringify(prior.variantIds)!==JSON.stringify(variantIds)))throw new Error(`Ambiguous gold pool for ${ref.name}`);
       inputPools.set(ref.id,prior || pool);
     }
   }

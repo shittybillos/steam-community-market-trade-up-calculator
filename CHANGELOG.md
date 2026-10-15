@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Show each eligible Doppler/Gamma Doppler gem and phase as an individual output with predicted float and wear.
+- Preserve case-specific variant IDs so unrelated or unavailable gems do not appear.
+- Label the finish probability as combined, without assuming equal phase/gem probabilities.
+- Link variant rows to Steam's shared finish listings.
+
 ## 0.3.1
 
 - Enforce a blanket exclusion of StatTrak Coverts from glove collections in selection, restored baskets and calculations.

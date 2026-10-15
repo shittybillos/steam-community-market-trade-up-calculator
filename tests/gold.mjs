@@ -54,6 +54,24 @@ const spectrum=calculate(repeat('P250 | See Ya Later'),catalog);
 assert.equal(spectrum.outcomes.length,30);
 const doppler=spectrum.outcomes.find(o=>o.skin.name==='★ Butterfly Knife | Doppler');
 assert.ok(doppler);assert.equal(doppler.skin.phases.length,7);assert.ok(Math.abs(doppler.probability-1/30)<1e-12);
+assert.deepEqual(doppler.variants.map(v=>v.phase),['Ruby','Sapphire','Black Pearl','Phase 1','Phase 2','Phase 3','Phase 4']);
+assert.ok(doppler.variants.every(v=>v.probability===null && Math.abs(v.float-.02)<1e-12 && v.wear==='Factory New'));
+assert.equal(new Set(doppler.variants.map(v=>v.id)).size,7);
+const gammaCase=crates.find(c=>c.name==='Dreams & Nightmares Case');
+const gammaInput=gammaCase.contains.find(s=>s.rarity.name==='Covert');
+const gammaResult=calculate(repeat(gammaInput.name),catalog);
+const gamma=gammaResult.outcomes.find(o=>o.skin.name.includes('Gamma Doppler'));
+assert.ok(gamma);assert.deepEqual(gamma.variants.map(v=>v.phase),['Emerald','Phase 1','Phase 2','Phase 3','Phase 4']);
+assert.ok(gamma.variants.every(v=>!['Ruby','Sapphire','Black Pearl'].includes(v.phase)));
+// Case-specific memberships must restrict variants despite a larger global family catalog.
+const narrowed=structuredClone(catalog);
+const narrowedInput=narrowed.find(s=>s.name==='P250 | See Ya Later');
+const butterflyIds=new Set(doppler.variants.map(v=>v.id));
+const rubyId=doppler.variants.find(v=>v.phase==='Ruby').id;
+narrowedInput.goldPool.variantIds=narrowedInput.goldPool.variantIds.filter(id=>!butterflyIds.has(id) || id===rubyId);
+const restricted=calculate(repeat('P250 | See Ya Later'),narrowed).outcomes.find(o=>o.skin.id===doppler.skin.id);
+assert.deepEqual(restricted.variants.map(v=>v.phase),['Ruby']);
+assert.ok(Math.abs(restricted.probability-1/30)<1e-12,'Variant display must not alter the combined finish probability.');
 assert.ok(Math.abs(spectrum.outcomes.reduce((a,o)=>a+o.probability,0)-1)<1e-12);
 assert.throws(()=>resolveListing({adapter:'steam-beta',listingId:'1',assetId:'1',name:'★ Butterfly Knife | Doppler (Factory New)',nativeFloat:.02,inspect:''},catalog),/uniquely matched/);
 
@@ -77,4 +95,5 @@ for(const skin of gloveCoverts){
 const lower=catalog.find(s=>s.rarity==='Classified' && s.collections.some(c=>gloveCoverts.some(g=>g.collections.some(gc=>gc.id===c.id))));
 assert.ok(lower);assert.ok(make(lower.name,true));
 console.log(`PASS: blanket exclusion for ${gloveCoverts.length} StatTrak glove-collection Coverts, including stale baskets and mixed knife drafts; lower rarities remain eligible.`);
+console.log('PASS: individual Doppler gems/phases, Gamma Emerald, per-variant float/wear, case-specific membership and unchanged combined odds.');
 console.log('PASS: gold catalog integrity, 5-input contracts, normal/StatTrak eligibility, glove gating, mixed/shared pool odds, normalized floats, vanilla outputs and Doppler family grouping.');
