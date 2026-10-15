@@ -11,9 +11,10 @@ import {listingRows,betaRows} from './beta.js';
   const root = host.attachShadow({mode:'open'});
   const style = document.createElement('style'); style.textContent=css; root.append(style);
   const launcher = document.createElement('button'); launcher.className='launcher'; launcher.textContent='◈ Trade-up bench';
+  launcher.setAttribute('aria-label','Open CS2 trade-up bench');
   const panel = document.createElement('section'); panel.className='panel'; panel.hidden=true;
-  panel.innerHTML = `<header><div><span class="eyebrow">CS2 / COMMUNITY MARKET</span><h1>Trade-up bench</h1></div><button id="close" aria-label="Minimize calculator">×</button></header>
-    <nav><button id="contract" class="active">Contract <span id="count">0/10</span></button><button id="browse">Page listings</button></nav>
+  panel.innerHTML = `<header><div><span class="eyebrow">CS2 / COMMUNITY MARKET</span><h1>Trade-up bench</h1></div><button id="close" aria-label="Minimize calculator" title="Minimize">×</button></header>
+    <nav aria-label="Trade-up bench views"><button id="contract" class="active">Contract <span id="count">0/10</span></button><button id="browse">Page listings</button></nav>
     <p id="error" role="alert" hidden></p>
     <div id="contractView"><div id="stats"></div><div id="basket"></div><div class="actions"><button id="export">Export JSON</button><button id="clear">Clear basket</button></div><h2>Possible outcomes</h2><p id="resultNote" class="muted"></p><div id="outcomes"></div></div>
     <div id="browseView" hidden><form id="searchForm"><label>Search CS2 market<input id="marketSearch" type="search" placeholder="AK-47 Redline" maxlength="160"></label><button type="submit">Search Steam</button></form><p class="muted">Search opens Steam’s CS2 results. Float filters below apply to loaded individual listings in this panel.</p><label>Filter loaded skins<input id="nameFilter" type="search" placeholder="Name or collection"></label><div class="filters"><label>Min float<input id="min" type="number" min="0" max="1" step="0.001" placeholder="0"></label><label>Max float<input id="max" type="number" min="0" max="1" step="0.001" placeholder="1"></label><label>Sort<select id="sort"><option value="float">Lowest float</option><option value="price">Lowest price</option></select></label></div><button id="scan">Refresh loaded listings</button><p id="scanNote" class="muted"></p><div id="candidates"></div></div>
@@ -145,13 +146,13 @@ import {listingRows,betaRows} from './beta.js';
         const status=item?`Float ${item.float.toFixed(10)} · Seed ${item.seed ?? '—'}`:candidate.error;
         candidateByRow.set(row,signature);
         let block=row.querySelector('.cs2-tradeup-row');
-        if(!block){block=document.createElement('div');block.className='cs2-tradeup-row';block.style.cssText='clear:both;padding:8px 12px;background:#16222e;color:#b6d4e6;font:12px/1.5 Arial,sans-serif;display:flex;gap:12px;align-items:center;';row.append(block);}
+        if(!block){block=document.createElement('div');block.className='cs2-tradeup-row';block.style.cssText='clear:both;padding:9px 12px;background:linear-gradient(110deg,#192a31,#16222e);color:#c3d8df;font:12px/1.5 Arial,sans-serif;display:flex;gap:12px;align-items:center;border-top:1px solid #85e7c21c;';row.append(block);}
         if(row.matches(betaRows)){
           // A positioned badge avoids adding a track to Beta's subgrid layout.
           if(getComputedStyle(row).position==='static' || !getComputedStyle(row).position)row.style.position='relative';
-          block.style.cssText='position:absolute;top:5px;right:5px;z-index:2;padding:5px;background:#16222ef0;color:#b6d4e6;font:10px/1.4 Arial,sans-serif;display:flex;flex-direction:column;gap:3px;max-width:85%;border-radius:5px;';
+          block.style.cssText='position:absolute;top:5px;right:5px;z-index:2;padding:7px;background:#16222ef5;color:#c3d8df;font:10px/1.4 Arial,sans-serif;display:flex;flex-direction:column;gap:5px;max-width:85%;border:1px solid #85e7c238;border-radius:7px;box-shadow:0 4px 14px #0006;';
         }
-        block.replaceChildren();const text=el('span',status);const add=el('button','Add to trade-up');add.style.cssText='padding:5px 10px;background:#85e7c2;color:#10291f;border:0;border-radius:4px;cursor:pointer;';
+        block.replaceChildren();const text=el('span',status);const add=el('button','Add to trade-up');add.style.cssText='padding:6px 10px;background:#85e7c2;color:#10291f;border:1px solid #a4f2d5;border-radius:6px;cursor:pointer;font:600 11px/1.2 Arial,sans-serif;white-space:nowrap;';
         const selected=basket.some(i=>i.listingId===record.listingId);if(selected){add.textContent='Added';add.disabled=true;}
         if(!item){add.disabled=true;add.title=status;}
         add.onclick=async e=>{e.preventDefault();e.stopPropagation();await command('add',{record});scan();};
