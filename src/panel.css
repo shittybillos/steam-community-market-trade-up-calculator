@@ -202,8 +202,34 @@ nav span {
 }
 
 #contractView,
-#browseView {
+#browseView,
+#planView {
   padding: 17px 18px 20px;
+}
+
+#planView > label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+#planView .filters {
+  margin-top: 4px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check input {
+  width: auto;
+  margin: 0;
+}
+
+.warn {
+  color: #f0c35f;
+  font-size: 12px;
 }
 
 #error {

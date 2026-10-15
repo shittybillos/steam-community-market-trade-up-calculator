@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add a "Make My Trade Up" tab: pick a target skin, wear and budget to get the best-odds 10-skin contract from baseline skins at planned floats, or the cheapest contract that can still produce the skin.
+
 ## 0.6.1
 
 - Load Steam prices much faster: shorter request spacing and four outcomes fetched in parallel.

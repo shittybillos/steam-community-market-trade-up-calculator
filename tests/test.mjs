@@ -6,6 +6,7 @@ import {decodeInspect,resolveListing,calculate,validateBasket,wear} from '../src
 import {betaRecord,betaListingFor} from '../src/beta.js';
 import {goldRecord} from './gold.mjs';
 import './prices.mjs';
+import './planner.mjs';
 const catalog=JSON.parse(await fs.readFile('dist/catalog.json','utf8'));
 const skin=catalog.find(s=>s.name==='AK-47 | Redline');
 assert.ok(skin);

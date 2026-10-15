@@ -2,6 +2,7 @@ import {calculate,contractSize,decodeInspect,resolveListing,wear} from './core.j
 import css from './panel.css';
 import {listingRows,betaRows} from './beta.js';
 import {analyze,createPriceLoader,marketName,SORTS,steamCurrency,TIERS} from './prices.js';
+import {targetSkins,achievableWears,candidates,plan} from './planner.js';
 
 (async () => {
   if (document.getElementById('cs2-tradeup-bench')) return;
@@ -15,12 +16,19 @@ import {analyze,createPriceLoader,marketName,SORTS,steamCurrency,TIERS} from './
   launcher.setAttribute('aria-label','Open CS2 trade-up bench');
   const panel = document.createElement('section'); panel.className='panel'; panel.hidden=true;
   panel.innerHTML = `<header><div><span class="eyebrow">CS2 / COMMUNITY MARKET</span><h1>Trade-up bench</h1></div><div class="window-actions"><button id="size" aria-label="Expand calculator" aria-pressed="false" title="Expand to 75% of the screen">⤢</button><button id="close" aria-label="Minimize calculator" title="Minimize">×</button></div></header>
-    <nav aria-label="Trade-up bench views"><button id="contract" class="active">Contract <span id="count">0/10</span></button><button id="browse">Page listings</button></nav>
+    <nav aria-label="Trade-up bench views"><button id="contract" class="active">Contract <span id="count">0/10</span></button><button id="browse">Page listings</button><button id="plan">Make My Trade Up</button></nav>
     <p id="error" role="alert" hidden></p>
     <div id="contractView"><div class="toolbar"><button id="clear">Clear basket</button><button id="export">Export JSON</button></div><div class="cols"><section class="col"><div id="stats"></div><div id="basket"></div></section><section class="col"><h2>Possible outcomes</h2>
       <div class="out-tools"><button id="loadPrices" title="Fetch Steam Community Market prices for every outcome">Load Steam prices</button><label>Sort<select id="outSort"><option value="chance">Highest chance</option><option value="value-desc">Highest value</option><option value="value-asc">Lowest value</option><option value="buy-desc">Highest buy order</option><option value="name">Name</option></select></label><label>Value basis<select id="basis"><option value="median">Avg market price</option><option value="buy">Highest buy order</option></select></label></div>
       <p id="priceNote" class="muted"></p><div id="roi"></div><div id="pie"></div><p id="resultNote" class="muted"></p><div id="outcomes"></div></section></div></div>
     <div id="browseView" hidden><form id="searchForm"><label>Search CS2 market<input id="marketSearch" type="search" placeholder="AK-47 Redline" maxlength="160"></label><button type="submit">Search Steam</button></form><p class="muted">Search opens Steam’s CS2 results. Float filters below apply to loaded individual listings in this panel.</p><label>Filter loaded skins<input id="nameFilter" type="search" placeholder="Name or collection"></label><div class="filters"><label>Min float<input id="min" type="number" min="0" max="1" step="0.001" placeholder="0"></label><label>Max float<input id="max" type="number" min="0" max="1" step="0.001" placeholder="1"></label><label>Sort<select id="sort"><option value="float">Lowest float</option><option value="price">Lowest price</option></select></label></div><button id="scan">Refresh loaded listings</button><p id="scanNote" class="muted"></p><div id="candidates"></div></div>
+    <div id="planView" hidden><p class="muted">Pick the skin you want and a budget. The best-odds 10-skin contract is built from baseline skins at planned floats — you find listings with those floats.</p>
+      <label>Find target skin<input id="planSearch" type="search" placeholder="AK-47 Redline" maxlength="80"></label>
+      <label>Target skin<select id="planTarget"></select></label>
+      <div class="filters"><label>Wanted wear<select id="planWear"></select></label><label>Budget<input id="planBudget" type="number" min="0" step="0.01" value="20"></label><label>Currency<select id="planCurrency"></select></label></div>
+      <label class="check"><input id="planST" type="checkbox"> StatTrak™</label>
+      <div class="toolbar"><button id="planGo">Build best trade-up</button></div>
+      <p id="planNote" class="muted"></p><div id="planResult"></div></div>
     <footer>Listing snapshots · 10-skin standard / 5-Covert gold contracts<br>Floats read locally. Prices include Steam’s listing fee when available.</footer>`;
   root.append(panel,launcher); document.documentElement.append(host);
   const $ = id => root.getElementById(id);
@@ -49,8 +57,64 @@ import {analyze,createPriceLoader,marketName,SORTS,steamCurrency,TIERS} from './
   $('size').onclick=()=>setLarge(!panel.classList.contains('large'));
   try{if(localStorage.getItem('cs2-tradeup-size')==='large')setLarge(true);}catch{/* Storage can be blocked. */}
   $('close').onclick=()=>{panel.hidden=true;launcher.hidden=false;};
-  function setView(next){view=next;open();$('contractView').hidden=next!=='contract';$('browseView').hidden=next!=='browse';$('contract').classList.toggle('active',next==='contract');$('browse').classList.toggle('active',next==='browse');if(next==='browse')scan();}
-  $('contract').onclick=()=>setView('contract');$('browse').onclick=()=>setView('browse');
+  function setView(next){view=next;open();$('contractView').hidden=next!=='contract';$('browseView').hidden=next!=='browse';$('planView').hidden=next!=='plan';$('contract').classList.toggle('active',next==='contract');$('browse').classList.toggle('active',next==='browse');$('plan').classList.toggle('active',next==='plan');if(next==='browse')scan();}
+  $('contract').onclick=()=>setView('contract');$('browse').onclick=()=>setView('browse');$('plan').onclick=()=>setView('plan');
+  const CURRENCIES={1:'USD',2:'GBP',3:'EUR',20:'CAD',21:'AUD',7:'BRL',23:'CNY',17:'TRY',19:'MXN',13:'SGD',24:'INR'};
+  for(const [id,code] of Object.entries(CURRENCIES)){const o=el('option',code);o.value=id;$('planCurrency').append(o);}
+  const targets=targetSkins(catalog);
+  function fillTargets(){
+    const q=$('planSearch').value.trim().toLowerCase(),keep=$('planTarget').value;
+    $('planTarget').replaceChildren();
+    for(const s of targets.filter(s=>!q||s.name.toLowerCase().includes(q)).slice(0,300)){const o=el('option',`${s.name} · ${s.rarity}`);o.value=s.id;$('planTarget').append(o);}
+    if(keep&&[...$('planTarget').options].some(o=>o.value===keep))$('planTarget').value=keep;
+    fillWears();
+  }
+  function fillWears(){
+    const s=targets.find(t=>t.id===$('planTarget').value),keep=$('planWear').value;
+    $('planWear').replaceChildren();
+    for(const w of s?achievableWears(s):[]){const o=el('option',w.name);o.value=w.name;$('planWear').append(o);}
+    if(keep&&[...$('planWear').options].some(o=>o.value===keep))$('planWear').value=keep;
+    $('planST').disabled=!s?.stattrak;if(!s?.stattrak)$('planST').checked=false;
+  }
+  $('planSearch').oninput=fillTargets;$('planTarget').onchange=fillWears;
+  fillTargets();
+  let planAbort=null;
+  $('planGo').onclick=async()=>{
+    if(planAbort){planAbort.abort();return;}
+    const target=targets.find(t=>t.id===$('planTarget').value);if(!target)return;
+    const st=$('planST').checked,cur=Number($('planCurrency').value);
+    const budget=Math.round(Number($('planBudget').value)*100);
+    if(!Number.isFinite(budget)||budget<0){showError('Enter a valid budget.');return;}
+    showError('');
+    const cand=candidates(target,st,$('planWear').value,catalog);
+    if(!cand||!cand.groups.length){$('planResult').replaceChildren(el('p','No trade-up can produce this skin with the chosen options.','empty'));return;}
+    const names=[...new Set(cand.groups.flatMap(g=>g.inputs.map(i=>i.name)))];
+    const controller=planAbort=new AbortController();$('planGo').textContent='Stop';
+    try{
+      await prices.load(names,cur,{signal:controller.signal,onUpdate:(n,e,done,total)=>{$('planNote').textContent=`Loading input prices ${done}/${total}…`;}});
+      if(controller.signal.aborted)return;
+      renderPlan(target,st,cand,plan(cand,budget,n=>prices.get(n,cur)),budget,cur);
+    }catch(e){if(e.name!=='AbortError')showError(e.message);}
+    finally{planAbort=null;$('planGo').textContent='Build best trade-up';}
+  };
+  function renderPlan(target,st,cand,result,budget,cur){
+    const box=$('planResult');box.replaceChildren();
+    if(!result){$('planNote').textContent='';box.append(el('p','No Steam prices were found for the possible input skins, so a plan could not be built.','empty'));return;}
+    $('planNote').textContent=`Prices come from the Steam Community Market (lowest listing). Target adjusted average float ≈ ${cand.plan.average.toFixed(4)} or lower.`;
+    const stats=el('div',null,'stats three');
+    for(const [label,value] of [['CHANCE OF TARGET',`${(result.odds*100).toFixed(2)}%`],['TOTAL COST',money(result.cost,cur)],['BUDGET',money(budget,cur)]]){const c=el('div');c.append(el('small',label),el('strong',value));stats.append(c);}
+    box.append(stats,el('p',result.withinBudget?'Highest odds that fit your budget.':`Nothing fits ${money(budget,cur)} — this is the cheapest contract that can still produce the skin.`,result.withinBudget?'muted':'warn'));
+    const displayName=`${st?'StatTrak™ ':''}${target.name}`;
+    box.append(el('h2',`Inputs for ${displayName} (${$('planWear').value})`));
+    for(const l of result.lines){
+      const card=el('article',null,'card'),body=el('div');
+      body.append(marketLink(`${l.count} × ${l.input.name}`,`https://steamcommunity.com/market/listings/730/${encodeURIComponent(l.input.name)}`),
+        el('p',`Find floats ≤ ${l.input.float.toFixed(4)} (valid range ${l.input.skin.min}–${l.input.skin.max}) · ${money(l.input.price,cur)} each`,'detail'),
+        el('p',`${l.collection.name} · ${l.pool} possible outcomes in this collection · ${(l.count/cand.size*100/l.pool).toFixed(2)}% from these`,'muted'));
+      card.append(thumb(l.input.skin.image,l.input.name),body);box.append(card);
+    }
+    box.append(el('p','Floats are planned from the average: lower-float inputs can offset higher ones, so any set whose adjusted floats average at or below the target works. Prices are for the planned wear; real listings vary.','micro'));
+  }
   $('clear').onclick=()=>command('clear');
   $('outSort').onchange=renderOutcomes;$('basis').onchange=renderOutcomes;
   $('loadPrices').onclick=async()=>{
