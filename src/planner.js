@@ -11,14 +11,15 @@ export const WEARS = [
 ];
 
 export const targetSkins = catalog => catalog
-  .filter(s => !s.gold && ranks.indexOf(s.rarity) >= 1 && s.min != null && s.max > s.min)
+  .filter(s => s.gold ? s.min == null || s.max > s.min : ranks.indexOf(s.rarity) >= 1 && s.min != null && s.max > s.min)
   .sort((a, b) => a.name.localeCompare(b.name));
 
-// Wear tiers the target skin can actually come out as.
-export const achievableWears = target => WEARS.filter(w => w.lo < target.max && w.hi > target.min);
+// Wear tiers the target skin can actually come out as. Vanilla knives have no float.
+export const achievableWears = target => target.min == null ? [{name: 'Vanilla'}] : WEARS.filter(w => w.lo < target.max && w.hi > target.min);
 
 // Normalized average float (0-1 across each skin's range) needed to land in the wear.
 export function plannedAverage(target, wearName) {
+  if (target.min == null) return wearName === 'Vanilla' ? {average: 1, low: 0, high: 1} : null;
   const w = WEARS.find(x => x.name === wearName);
   if (!w || w.lo >= target.max || w.hi <= target.min) return null;
   const range = target.max - target.min;
@@ -35,16 +36,32 @@ export const marketNameFor = (skin, stattrak, floatValue) =>
 export function candidates(target, stattrak, wearName, catalog) {
   const plan = plannedAverage(target, wearName);
   if (!plan || (stattrak && !target.stattrak)) return null;
+  const asInput = (skin) => {
+    const float = skin.min + plan.average * (skin.max - skin.min);
+    return {skin, float, name: marketNameFor(skin, stattrak, float)};
+  };
+  if (target.gold) {
+    // Gold contracts take 5 Coverts; every Covert sharing a pool with the target is a candidate.
+    const pools = new Map();
+    for (const s of catalog) if (!s.gold && s.rarity === 'Covert' && s.goldPool && s.goldPool.outcomeIds.includes(target.id) && (!stattrak || s.stattrak) && s.min != null && s.max > s.min) {
+      if (stattrak && s.goldPool.kind === 'gloves') continue;
+      const group = pools.get(s.goldPool.id) || {collection: {id: s.goldPool.id, name: s.goldPool.name}, inputs: []};
+      group.inputs.push(asInput(s));
+      pools.set(s.goldPool.id, group);
+    }
+    const groups = [...pools.values()].map(g => {
+      const ids = new Set(catalog.find(s => s.id === g.inputs[0].skin.id).goldPool.outcomeIds);
+      return {...g, pool: catalog.filter(s => s.gold && ids.has(s.id) && (!stattrak || s.stattrak)).length};
+    }).filter(g => g.pool);
+    return {plan, groups, size: 5};
+  }
   const prev = ranks[ranks.indexOf(target.rarity) - 1];
   const groups = [];
   for (const collection of target.collections) {
     const pool = catalog.filter(s => !s.gold && s.rarity === target.rarity && (!stattrak || s.stattrak) && s.collections.some(c => c.id === collection.id)).length;
     const inputs = catalog
       .filter(s => !s.gold && s.rarity === prev && (!stattrak || s.stattrak) && s.min != null && s.collections.some(c => c.id === collection.id))
-      .map(skin => {
-        const float = skin.min + plan.average * (skin.max - skin.min);
-        return {skin, float, name: marketNameFor(skin, stattrak, float)};
-      });
+      .map(asInput);
     if (pool && inputs.length) groups.push({collection, pool, inputs});
   }
   return {plan, groups, size: 10};

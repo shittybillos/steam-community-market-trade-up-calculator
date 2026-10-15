@@ -22,7 +22,7 @@ import {targetSkins,achievableWears,candidates,plan} from './planner.js';
       <div class="out-tools"><button id="loadPrices" title="Fetch Steam Community Market prices for every outcome">Load Steam prices</button><label>Sort<select id="outSort"><option value="chance">Highest chance</option><option value="value-desc">Highest value</option><option value="value-asc">Lowest value</option><option value="buy-desc">Highest buy order</option><option value="name">Name</option></select></label><label>Value basis<select id="basis"><option value="median">Avg market price</option><option value="buy">Highest buy order</option></select></label></div>
       <p id="priceNote" class="muted"></p><div id="roi"></div><div id="pie"></div><p id="resultNote" class="muted"></p><div id="outcomes"></div></section></div></div>
     <div id="browseView" hidden><form id="searchForm"><label>Search CS2 market<input id="marketSearch" type="search" placeholder="AK-47 Redline" maxlength="160"></label><button type="submit">Search Steam</button></form><p class="muted">Search opens Steam’s CS2 results. Float filters below apply to loaded individual listings in this panel.</p><label>Filter loaded skins<input id="nameFilter" type="search" placeholder="Name or collection"></label><div class="filters"><label>Min float<input id="min" type="number" min="0" max="1" step="0.001" placeholder="0"></label><label>Max float<input id="max" type="number" min="0" max="1" step="0.001" placeholder="1"></label><label>Sort<select id="sort"><option value="float">Lowest float</option><option value="price">Lowest price</option></select></label></div><button id="scan">Refresh loaded listings</button><p id="scanNote" class="muted"></p><div id="candidates"></div></div>
-    <div id="planView" hidden><p class="muted">Pick the skin you want and a budget. The best-odds 10-skin contract is built from baseline skins at planned floats — you find listings with those floats.</p>
+    <div id="planView" hidden><p class="muted">Pick the skin you want and a budget. The best-odds contract (10 skins, or 5 Coverts for knife/glove targets) is built from baseline skins at planned floats — you find listings with those floats.</p>
       <label>Find target skin<input id="planSearch" type="search" placeholder="AK-47 Redline" maxlength="80"></label>
       <label>Target skin<select id="planTarget"></select></label>
       <div class="filters"><label>Wanted wear<select id="planWear"></select></label><label>Budget<input id="planBudget" type="number" min="0" step="0.01" value="20"></label><label>Currency<select id="planCurrency"></select></label></div>
@@ -65,7 +65,7 @@ import {targetSkins,achievableWears,candidates,plan} from './planner.js';
   function fillTargets(){
     const q=$('planSearch').value.trim().toLowerCase(),keep=$('planTarget').value;
     $('planTarget').replaceChildren();
-    for(const s of targets.filter(s=>!q||s.name.toLowerCase().includes(q)).slice(0,300)){const o=el('option',`${s.name} · ${s.rarity}`);o.value=s.id;$('planTarget').append(o);}
+    for(const s of targets.filter(s=>!q||s.name.toLowerCase().includes(q)).slice(0,300)){const o=el('option',`${s.name} · ${s.gold?'Gold':s.rarity}`);o.value=s.id;$('planTarget').append(o);}
     if(keep&&[...$('planTarget').options].some(o=>o.value===keep))$('planTarget').value=keep;
     fillWears();
   }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+
+- Make My Trade Up now supports gold knife and glove targets using 5-Covert contracts, including vanilla knives and StatTrak.
+
 ## 0.7.0
 
 - Add a "Make My Trade Up" tab: pick a target skin, wear and budget to get the best-odds 10-skin contract from baseline skins at planned floats, or the cheapest contract that can still produce the skin.

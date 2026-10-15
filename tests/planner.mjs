@@ -28,4 +28,19 @@ assert.ok(broke.odds>0);
 assert.ok(broke.cost<=rich.cost+1e-9||cand.groups.length===1);
 
 assert.equal(plan(cand,10**9,()=>null),null);
+
+const gold=targetSkins(catalog).find(s=>s.gold&&s.min!=null&&s.category==='Knives'&&s.stattrak);
+assert.ok(gold);
+const gw=achievableWears(gold)[0].name;
+const gc=candidates(gold,false,gw,catalog);
+assert.equal(gc.size,5);
+assert.ok(gc.groups.length>=1);
+for(const g of gc.groups)for(const i of g.inputs)assert.equal(i.skin.rarity,'Covert');
+const gp=plan(gc,10**9,priceFor(1000));
+assert.equal(gp.lines.reduce((s,l)=>s+l.count,0),5);
+assert.ok(Math.abs(gp.odds-Math.max(...gc.groups.map(g=>1/g.pool)))<1e-9);
+const vanilla=targetSkins(catalog).find(s=>s.gold&&s.min==null);
+assert.deepEqual(achievableWears(vanilla).map(w=>w.name),['Vanilla']);
+assert.ok(candidates(vanilla,false,'Vanilla',catalog).groups.length>=1);
+assert.equal(candidates(gold,true,gw,catalog)!==null,true);
 console.log('PASS: Make My Trade Up planner — candidates, planned floats, best odds within budget and cheapest fallback.');
