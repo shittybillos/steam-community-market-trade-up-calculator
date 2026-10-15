@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0
 
 - Add a "Make My Trade Up" tab: pick a target skin, wear and budget to get the best-odds 10-skin contract from baseline skins at planned floats, or the cheapest contract that can still produce the skin.
 

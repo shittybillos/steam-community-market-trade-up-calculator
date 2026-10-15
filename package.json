@@ -8,7 +8,7 @@
     "build": "node build.mjs"
   },
   "name": "steam-community-market-trade-up-calculator",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "On-page CS2 trade-up calculator for Steam Community Market Beta and classic pages.",
   "private": true,
   "license": "MIT",

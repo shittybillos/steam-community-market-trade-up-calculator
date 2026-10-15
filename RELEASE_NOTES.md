@@ -1,6 +1,10 @@
 Chrome extension for CS2 trade-ups directly on Steam Community Market, supporting Beta and classic pages.
 
-### What's new in v0.6.1
+### What's new in v0.7.0
+
+- New "Make My Trade Up" tab: choose a target skin, wear and budget and get the best-odds contract from baseline skins at planned floats (or the cheapest one that can still hit the skin). You find listings with the suggested floats.
+
+### Earlier: v0.6.1
 
 - Steam prices load much faster (parallel requests, shorter spacing).
 
