@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Steam Community Market Trade-up Calculator",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "minimum_chrome_version": "111",
   "description": "Add individual Steam CS2 listings to an on-page trade-up calculator with locally decoded inspect floats.",
   "permissions": ["storage"],

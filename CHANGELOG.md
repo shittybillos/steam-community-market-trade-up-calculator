@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Refresh the trade-up bench with clearer visual hierarchy, smoother controls and a responsive small-screen layout.
+- Improve keyboard focus visibility and polish the add-to-trade-up controls on Steam listings.
+
 ## 0.4.0
 
 - Show each eligible Doppler/Gamma Doppler gem and phase as an individual output with predicted float and wear.
