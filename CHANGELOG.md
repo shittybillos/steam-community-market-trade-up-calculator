@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+
+- Move Clear basket and Export to a toolbar at the top of the bench.
+- Add a "Load Steam prices" button: shows highest buy order and average market price for every outcome (Steam Community Market only, rate-limited, cached 30 min).
+- Add outcome sorting (chance, value, buy order, name) and a value basis switch.
+- Add ROI after Steam's 15% sale fee, chance of profit, and a color-keyed six-tier value pie chart.
+
 ## 0.5.0
 
 - Add a compact/75%-screen size toggle to the trade-up bench; the large view shows inputs and outcomes side by side and remembers your choice.

@@ -1,6 +1,13 @@
 Chrome extension for CS2 trade-ups directly on Steam Community Market, supporting Beta and classic pages.
 
-### What's new in v0.5.0
+### What's new in v0.6.0
+
+- Clear basket / Export now sit at the top of the bench.
+- Load Steam prices: highest buy order and average price per outcome, straight from the Steam Community Market (click-to-load, rate-limited).
+- Sort outcomes by chance, value, buy order or name.
+- ROI after Steam's sale fee, chance of profit, and a six-tier color-keyed pie chart.
+
+### Earlier: v0.5.0
 
 - Resize the bench between the compact popup and a 75%-screen view with the ⤢ button in the header.
 - Item images for every input (taken from its Steam listing) and every output, including each Doppler/Gamma Doppler gem and phase.

@@ -1,6 +1,7 @@
 import {calculate,contractSize,decodeInspect,resolveListing,wear} from './core.js';
 import css from './panel.css';
 import {listingRows,betaRows} from './beta.js';
+import {analyze,createPriceLoader,marketName,SORTS,steamCurrency,TIERS} from './prices.js';
 
 (async () => {
   if (document.getElementById('cs2-tradeup-bench')) return;
@@ -16,13 +17,17 @@ import {listingRows,betaRows} from './beta.js';
   panel.innerHTML = `<header><div><span class="eyebrow">CS2 / COMMUNITY MARKET</span><h1>Trade-up bench</h1></div><div class="window-actions"><button id="size" aria-label="Expand calculator" aria-pressed="false" title="Expand to 75% of the screen">⤢</button><button id="close" aria-label="Minimize calculator" title="Minimize">×</button></div></header>
     <nav aria-label="Trade-up bench views"><button id="contract" class="active">Contract <span id="count">0/10</span></button><button id="browse">Page listings</button></nav>
     <p id="error" role="alert" hidden></p>
-    <div id="contractView"><div class="cols"><section class="col"><div id="stats"></div><div id="basket"></div><div class="actions"><button id="export">Export JSON</button><button id="clear">Clear basket</button></div></section><section class="col"><h2>Possible outcomes</h2><p id="resultNote" class="muted"></p><div id="outcomes"></div></section></div></div>
+    <div id="contractView"><div class="toolbar"><button id="clear">Clear basket</button><button id="export">Export JSON</button></div><div class="cols"><section class="col"><div id="stats"></div><div id="basket"></div></section><section class="col"><h2>Possible outcomes</h2>
+      <div class="out-tools"><button id="loadPrices" title="Fetch Steam Community Market prices for every outcome">Load Steam prices</button><label>Sort<select id="outSort"><option value="chance">Highest chance</option><option value="value-desc">Highest value</option><option value="value-asc">Lowest value</option><option value="buy-desc">Highest buy order</option><option value="name">Name</option></select></label><label>Value basis<select id="basis"><option value="median">Avg market price</option><option value="buy">Highest buy order</option></select></label></div>
+      <p id="priceNote" class="muted"></p><div id="roi"></div><div id="pie"></div><p id="resultNote" class="muted"></p><div id="outcomes"></div></section></div></div>
     <div id="browseView" hidden><form id="searchForm"><label>Search CS2 market<input id="marketSearch" type="search" placeholder="AK-47 Redline" maxlength="160"></label><button type="submit">Search Steam</button></form><p class="muted">Search opens Steam’s CS2 results. Float filters below apply to loaded individual listings in this panel.</p><label>Filter loaded skins<input id="nameFilter" type="search" placeholder="Name or collection"></label><div class="filters"><label>Min float<input id="min" type="number" min="0" max="1" step="0.001" placeholder="0"></label><label>Max float<input id="max" type="number" min="0" max="1" step="0.001" placeholder="1"></label><label>Sort<select id="sort"><option value="float">Lowest float</option><option value="price">Lowest price</option></select></label></div><button id="scan">Refresh loaded listings</button><p id="scanNote" class="muted"></p><div id="candidates"></div></div>
     <footer>Listing snapshots · 10-skin standard / 5-Covert gold contracts<br>Floats read locally. Prices include Steam’s listing fee when available.</footer>`;
   root.append(panel,launcher); document.documentElement.append(host);
   const $ = id => root.getElementById(id);
   let basket=[], records=new Map(), view='contract', scanning=false, scanTimer;
   let visibleRows=new Map();
+  let lastResult=null,priceAbort=null;
+  const prices=createPriceLoader({store:(()=>{try{return localStorage;}catch{return null;}})()});
   const resolved=new Map();
   const candidateByRow=new WeakMap();
   function open(){panel.hidden=false;launcher.hidden=true;}
@@ -47,6 +52,19 @@ import {listingRows,betaRows} from './beta.js';
   function setView(next){view=next;open();$('contractView').hidden=next!=='contract';$('browseView').hidden=next!=='browse';$('contract').classList.toggle('active',next==='contract');$('browse').classList.toggle('active',next==='browse');if(next==='browse')scan();}
   $('contract').onclick=()=>setView('contract');$('browse').onclick=()=>setView('browse');
   $('clear').onclick=()=>command('clear');
+  $('outSort').onchange=renderOutcomes;$('basis').onchange=renderOutcomes;
+  $('loadPrices').onclick=async()=>{
+    if(priceAbort){priceAbort.abort();return;}
+    if(!lastResult?.outcomes.length)return;
+    const cur=steamCurrency(lastResult.currency);
+    const names=[...lastResult.outcomes].sort((a,b)=>b.probability-a.probability).map(o=>outcomeName(o).name);
+    const controller=priceAbort=new AbortController();
+    $('loadPrices').textContent='Stop loading';
+    try{
+      await prices.load(names,cur,{signal:controller.signal,onUpdate:(name,entry,done,total)=>{$('priceNote').textContent=`Loading Steam prices ${done}/${total}…`;renderOutcomes();}});
+    }catch(e){if(e.name!=='AbortError')showError(e.message);}
+    finally{priceAbort=null;$('loadPrices').textContent='Load Steam prices';renderOutcomes();}
+  };
   $('scan').onclick=()=>{scan();requestListings();};
   ['min','max','sort','nameFilter'].forEach(id=>$(id).oninput=()=>renderCandidates());
   $('sort').onchange=()=>renderCandidates();
@@ -88,17 +106,67 @@ import {listingRows,betaRows} from './beta.js';
     });
     const state=!basket.length?'Outcomes appear after the first skin.':result.complete?`Complete ${result.gold?'gold':'standard'} contract · predicted floats and odds.`:`Preview for the current ${basket.length} inputs. Add ${required-basket.length} more to complete the contract; predictions will change.`;
     $('resultNote').textContent=state+(result.gold?' Gold odds are per finish family. Eligible Doppler gems/phases are listed individually below their finish; individual phase odds are not estimated.':'');
+    lastResult=result;renderOutcomes();
+    renderCandidates();
+  }
+  function outcomeName(o){
+    const prefix=basket[0]?.stattrak?'StatTrak™ ':'';
+    const displayName=o.skin.gold?o.skin.name.replace(/^★ /,`★ ${prefix}`):`${prefix}${o.skin.name}`;
+    return {displayName,name:marketName(displayName,o.wear)};
+  }
+  function pct(n,digits=1){return `${n>=0?'+':''}${(n*100).toFixed(digits)}%`;}
+  function renderSummary(a,result,cost,cur){
+    const box=$('roi'),pie=$('pie');box.replaceChildren();pie.replaceChildren();
+    if(!result.outcomes.length)return;
+    if(!result.complete||cost==null){box.append(el('p','Complete the contract to see ROI, chance of profit and the value breakdown.','muted'));return;}
+    if(!a.coverage){box.append(el('p','Load Steam prices to see ROI, chance of profit and the value breakdown.','muted'));return;}
+    const stats=el('div',null,'stats three');
+    const cells=[['EXPECTED ROI',pct(a.roi),a.roi>=0?'good':'bad'],['EXPECTED RETURN',money(Math.round(a.expected),cur),''],['CHANCE OF PROFIT',`${a.coverage<.9995?'≥ ':''}${(a.chanceOfProfit*100).toFixed(1)}%`,a.chanceOfProfit>=.5?'good':'bad']];
+    for(const [label,value,tone] of cells){const cell=el('div');if(tone)cell.dataset.tone=tone;cell.append(el('small',label),el('strong',value));stats.append(cell);}
+    const covered=`${(a.coverage*100).toFixed(0)}% of outcome odds priced`;
+    box.append(stats,el('p',`Net of Steam’s 15% sale fee (5% Steam + 10% CS2) against your ${money(cost,cur)} input cost; ${covered}${a.coverage<.9995?', so ROI assumes unpriced outcomes match the priced average':''}. Rough estimate, not a guarantee.`,'micro'));
+    const slices=[...a.tiers.map(t=>({color:t.color,probability:t.probability})),{color:'#5b6b75',probability:a.unknown}];
+    const total=slices.reduce((s,t)=>s+t.probability,0)||1;
+    let acc=0;const stops=[];
+    for(const s of slices){if(s.probability<=0)continue;const from=acc/total*360;acc+=s.probability;stops.push(`${s.color} ${from.toFixed(2)}deg ${(acc/total*360).toFixed(2)}deg`);}
+    const chart=el('div',null,'pie-chart');chart.style.background=`conic-gradient(${stops.join(',')})`;chart.setAttribute('role','img');chart.setAttribute('aria-label','Probability of each outcome value tier');
+    const lows=[0,.5,.8,1,1.5,3],highs=[.5,.8,1,1.5,3,Infinity];
+    const legend=el('ul',null,'pie-key');
+    a.tiers.forEach((t,i)=>{
+      const range=highs[i]===Infinity?`over ${money(Math.round(lows[i]*cost),cur)}`:`${money(Math.round(lows[i]*cost),cur)} – ${money(Math.round(highs[i]*cost),cur)}`;
+      const li=el('li');const swatch=el('i');swatch.style.background=t.color;
+      const label=el('span');label.append(el('b',`${t.label} · ${(t.probability/total*100).toFixed(1)}%`),el('small',`${range} (${t.note})`));
+      li.append(swatch,label);legend.append(li);
+    });
+    if(a.unknown>1e-9){const li=el('li');const swatch=el('i');swatch.style.background='#5b6b75';const label=el('span');label.append(el('b',`No price data · ${(a.unknown/total*100).toFixed(1)}%`),el('small','Not on the Steam market or not loaded'));li.append(swatch,label);legend.append(li);}
+    const wrap=el('div',null,'pie-wrap');wrap.append(chart,legend);pie.append(el('h2','Value tiers'),wrap);
+  }
+  function renderOutcomes(){
+    const result=lastResult;if(!result)return;
+    const cur=steamCurrency(result.currency);
+    const infos=result.outcomes.map(o=>({o,...outcomeName(o),probability:o.probability}));
+    for(const i of infos)i.entry=prices.get(i.name,cur);
+    const cost=result.complete&&result.total>0?result.total:null;
+    const analysis=analyze(infos,cost,$('basis').value);
+    renderSummary(analysis,result,cost,cur);
+    if(!priceAbort){
+      const missing=prices.pending(infos.map(i=>i.name),cur);
+      $('priceNote').textContent=!infos.length?'':missing?`${missing} of ${infos.length} outcome prices not loaded. Loading takes roughly ${Math.max(1,Math.ceil(missing*9/60))} min because Steam limits request speed.`:'Prices loaded from Steam Community Market (cached for 30 minutes).';
+    }
     $('outcomes').replaceChildren();
-    result.outcomes.forEach(o=>{
-      const prefix=basket[0].stattrak?'StatTrak™ ':'';
-      const displayName=o.skin.gold?o.skin.name.replace(/^★ /,`★ ${prefix}`):`${prefix}${o.skin.name}`;
-      const name=displayName+(o.wear?` (${o.wear})`:'');
+    analysis.rows.sort(SORTS[$('outSort').value]||SORTS.chance).forEach(({o,displayName,name,entry,net})=>{
+      const priceLine=()=>{
+        if(!entry)return el('p','Steam prices not loaded','micro');
+        const parts=[`Top buy order ${entry.buy!=null?money(entry.buy,cur):'—'}`,`Avg price ${entry.median!=null?money(entry.median,cur):entry.lowest!=null?`${money(entry.lowest,cur)} (lowest)`:'—'}`];
+        if(net!=null)parts.push(`Net after fees ${money(net,cur)}${cost?` (${pct(net/cost-1,0)} vs cost)`:''}`);
+        return el('p',parts.join(' · '),'price');
+      };
       const card=el('article',null,'outcome'),line=el('div',null,'outcome-line');
       line.append(marketLink(displayName,`https://steamcommunity.com/market/listings/730/${encodeURIComponent(name)}`),el('b',`${(o.probability*100).toFixed(2)}%`));
       if(o.variants?.length){
         line.lastElementChild.textContent=`${(o.probability*100).toFixed(2)}% combined`;
         card.append(thumb(o.skin.image,displayName),el('div',null,'outcome-body'));const body=card.lastElementChild;
-        body.append(line,el('p','Finish chance covers the eligible outcomes below. Individual phase/gem odds are unavailable.','muted'));
+        body.append(line,el('p','Finish chance covers the eligible outcomes below. Individual phase/gem odds are unavailable.','muted'),priceLine());
         for(const v of o.variants){
           const variant=el('article',null,'phase-output');variant.dataset.phase=v.phase;variant.dataset.paintIndex=String(v.paintIndex);
           const label=marketLink(`${displayName} — ${v.phase}`,`https://steamcommunity.com/market/listings/730/${encodeURIComponent(displayName+` (${v.wear})`)}`);
@@ -108,12 +176,11 @@ import {listingRows,betaRows} from './beta.js';
           body.append(variant);
         }
       }else{
-        const body=el('div',null,'outcome-body');body.append(line,el('p',o.float==null?'Vanilla · no exterior':`${o.float.toFixed(10)} · ${o.wear}`,'detail'));
+        const body=el('div',null,'outcome-body');body.append(line,el('p',o.float==null?'Vanilla · no exterior':`${o.float.toFixed(10)} · ${o.wear}`,'detail'),priceLine());
         card.append(thumb(o.skin.image,displayName),body);
       }
       $('outcomes').append(card);
     });
-    renderCandidates();
   }
   function rowFor(id){return visibleRows.get(String(id));}
   function evaluate(record){
