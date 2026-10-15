@@ -1,6 +1,10 @@
 Chrome extension for CS2 trade-ups directly on Steam Community Market, supporting Beta and classic pages.
 
-### What's new in v0.6.0
+### What's new in v0.6.1
+
+- Steam prices load much faster (parallel requests, shorter spacing).
+
+### Earlier: v0.6.0
 
 - Clear basket / Export now sit at the top of the bench.
 - Load Steam prices: highest buy order and average price per outcome, straight from the Steam Community Market (click-to-load, rate-limited).

@@ -1,7 +1,8 @@
 // Steam Community Market price lookups and trade-up value analysis.
 // All amounts are integer minor currency units (for example cents).
 
-export const REQUEST_SPACING_MS = 3000;
+export const REQUEST_SPACING_MS = 600;
+const CONCURRENCY = 4;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const CACHE_KEY = 'cs2-tradeup-prices-v1';
 
@@ -109,12 +110,14 @@ export function createPriceLoader({fetchFn = (...a) => fetch(...a), sleep = ms =
   };
   const key = (name, cur) => `${cur}|${name}`;
   const fresh = e => e && now() - e.at < CACHE_TTL_MS;
-  let lastRequest = 0;
+  let nextSlot = 0;
   async function get(url, kind, signal) {
-    const wait = lastRequest + spacing - now();
+    // Reserve a start slot synchronously so concurrent workers stay spaced.
+    const start = Math.max(now(), nextSlot);
+    nextSlot = start + spacing;
+    const wait = start - now();
     if (wait > 0) await sleep(wait);
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    lastRequest = now();
     const res = await fetchFn(url, {credentials: 'same-origin', signal});
     if (res.status === 429) throw new RateLimited('Steam is rate limiting price requests. Wait a few minutes and try again.');
     if (!res.ok) return null;
@@ -148,17 +151,22 @@ export function createPriceLoader({fetchFn = (...a) => fetch(...a), sleep = ms =
   }
   // Requests run one at a time and are spaced out to stay inside Steam's limits.
   async function load(names, cur, {onUpdate, signal} = {}) {
-    let done = 0;
-    for (const name of names) {
-      if (signal?.aborted) break;
-      if (!fresh(prices.get(key(name, cur)))) {
-        const entry = await loadOne(name, cur, signal);
-        prices.set(key(name, cur), entry);
-        persist();
+    let done = 0, index = 0, failure = null;
+    const worker = async () => {
+      while (!failure && !signal?.aborted && index < names.length) {
+        const name = names[index++];
+        try {
+          if (!fresh(prices.get(key(name, cur)))) {
+            prices.set(key(name, cur), await loadOne(name, cur, signal));
+            persist();
+          }
+        } catch (e) { failure = failure || e; return; }
+        done++;
+        onUpdate?.(name, prices.get(key(name, cur)), done, names.length);
       }
-      done++;
-      onUpdate?.(name, prices.get(key(name, cur)), done, names.length);
-    }
+    };
+    await Promise.all(Array.from({length: Math.min(CONCURRENCY, names.length)}, worker));
+    if (failure) throw failure;
   }
   return {load, get: (name, cur) => prices.get(key(name, cur)), pending: (names, cur) => names.filter(n => !fresh(prices.get(key(n, cur)))).length, RateLimited};
 }

@@ -151,7 +151,7 @@ import {analyze,createPriceLoader,marketName,SORTS,steamCurrency,TIERS} from './
     renderSummary(analysis,result,cost,cur);
     if(!priceAbort){
       const missing=prices.pending(infos.map(i=>i.name),cur);
-      $('priceNote').textContent=!infos.length?'':missing?`${missing} of ${infos.length} outcome prices not loaded. Loading takes roughly ${Math.max(1,Math.ceil(missing*9/60))} min because Steam limits request speed.`:'Prices loaded from Steam Community Market (cached for 30 minutes).';
+      $('priceNote').textContent=!infos.length?'':missing?`${missing} of ${infos.length} outcome prices not loaded. Loading takes roughly ${Math.max(1,Math.ceil(missing*2/60))} min because Steam limits request speed.`:'Prices loaded from Steam Community Market (cached for 30 minutes).';
     }
     $('outcomes').replaceChildren();
     analysis.rows.sort(SORTS[$('outSort').value]||SORTS.chance).forEach(({o,displayName,name,entry,net})=>{

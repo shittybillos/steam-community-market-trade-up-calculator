@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1
+
+- Load Steam prices much faster: shorter request spacing and four outcomes fetched in parallel.
+
 ## 0.6.0
 
 - Move Clear basket and Export to a toolbar at the top of the bench.
